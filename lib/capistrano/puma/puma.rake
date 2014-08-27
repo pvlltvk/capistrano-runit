@@ -43,7 +43,7 @@ namespace :runit do
           error "Template from 'runit_puma_run_template' variable isn't found: #{run_template_path}"
         end
 
-	config_template_path = fetch(:runit_config_puma_template)
+	config_template_path = fetch(:runit_puma_config_template)
 	if !config_template_path.nil? && File.exist?(config_template_path)
           config_template = ERB.new(File.read(config_template_path))
           config_stream = StringIO.new(config_template.result(binding))
@@ -58,9 +58,9 @@ namespace :runit do
     desc "Change puma config"
     task :change_config do
       on roles(:app) do |host|
-        if test "[ -f #{deploy_to}/runit/puma.rb} ]"
+        if test "[ -f #{deploy_to}/runit/puma.rb ]"
           execute :rm, "-f", "{deploy_to}/runit/puma.rb}"
-          config_template_path = fetch(:runit_config_puma_template)
+          config_template_path = fetch(:runit_puma_config_template)
           if !config_template_path.nil? && File.exist?(config_template_path)
             config_template = ERB.new(File.read(config_template_path))
             config_stream = StringIO.new(config_template.result(binding))
@@ -78,9 +78,9 @@ namespace :runit do
     task :enable do
       on roles(:app) do |host|
         if test "[ -d #{deploy_to}/runit/available/puma-#{fetch(:application)} ]"
-          within "#{deploy_to}/runit/enabled-#{fetch(:application)}" do
+          within "#{deploy_to}/runit/enabled" do
             execute :ln, "-sf", "../available/puma-#{fetch(:application)}", "puma-#{fetch(:application)}"
-	    execute :ln, "-sf", "#{deploy_to}/runit/available/puma-#{fetch(:application)}", "/etc/service/",
+	    execute :ln, "-sf", "#{deploy_to}/runit/available/puma-#{fetch(:application)}", "/etc/service/"
           end
         else
           error "Puma runit service isn't found. You should run runit:puma:setup."
@@ -94,19 +94,19 @@ namespace :runit do
       on roles(:app) do
         if test "[ -d #{deploy_to}/runit/enabled/puma-#{fetch(:application)} ]"
           execute :rm, "-f", "#{deploy_to}/runit/enabled/puma-#{fetch(:application)}"
-	  execute :rm. "-f", "/etc/service/puma-#{fetch(:application)}"
+	  execute :rm, "-f", "/etc/service/puma-#{fetch(:application)}"
         else
           error "Puma runit service isn't enabled."
         end
       end
     end
 
-    %w[start stop restart].each do |command|
+    %w[start stop restart status].each do |command|
     desc "#{command} Puma server."
     task command do
       on roles(:app) do
         if test "[ -d #{deploy_to}/runit/enabled/puma-#{fetch(:application)} ]"
-          execute :sv, "restart", "puma-#{fetch(:application)}", "#{command}"
+          execute :sv, "#{command}", "puma-#{fetch(:application)}"
         else
           error "Puma runit service isn't enabled."
         end
