@@ -27,20 +27,49 @@ namespace :runit do
       end
 
       on roles(:app) do |host|
-        if test "[ ! -d #{deploy_to}/runit/available/puma ]"
-          execute :mkdir, "-v", "#{deploy_to}/runit/available/puma"
+        if test "[ ! -d #{deploy_to}/runit/available/puma-#{fetch(:application)} ]"
+          execute :mkdir, "-v", "#{deploy_to}/runit/available/puma-#{fetch(:application)}"
         end
         if test "[ ! -d #{shared_path}/tmp/puma ]"
           execute :mkdir, "-v", "#{shared_path}/tmp/puma"
         end
-        template_path = fetch(:runit_puma_run_template)
-        if !template_path.nil? && File.exist?(template_path)
-          template = ERB.new(File.read(template_path))
-          stream = StringIO.new(template.result(binding))
-          upload! stream, "#{deploy_to}/runit/available/puma/run"
-          execute :chmod, "0755", "#{deploy_to}/runit/available/puma/run"
+        run_template_path = fetch(:runit_puma_run_template)
+        if !run_template_path.nil? && File.exist?(run_template_path)
+          run_template = ERB.new(File.read(run_template_path))
+          run_stream = StringIO.new(run_template.result(binding))
+          upload! run_stream, "#{deploy_to}/runit/available/puma-#{fetch(:application)}/run"
+          execute :chmod, "0755", "#{deploy_to}/runit/available/puma-#{fetch(:application)}/run"
         else
-          error "Template from 'runit_puma_run_template' variable isn't found: #{template_path}"
+          error "Template from 'runit_puma_run_template' variable isn't found: #{run_template_path}"
+        end
+
+	config_template_path = fetch(:runit_config_puma_template)
+	if !config_template_path.nil? && File.exist?(config_template_path)
+          config_template = ERB.new(File.read(config_template_path))
+          config_stream = StringIO.new(config_template.result(binding))
+          upload! config_stream, "#{deploy_to}/runit/puma.rb"
+        else
+          error "Template from 'config_puma_template' variable isn't found: #{config_template_path}"
+        end
+
+      end
+    end
+
+    desc "Change puma config"
+    task :change_config do
+      on roles(:app) do |host|
+        if test "[ -f #{deploy_to}/runit/puma.rb} ]"
+          execute :rm, "-f", "{deploy_to}/runit/puma.rb}"
+          config_template_path = fetch(:runit_config_puma_template)
+          if !config_template_path.nil? && File.exist?(config_template_path)
+            config_template = ERB.new(File.read(config_template_path))
+            config_stream = StringIO.new(config_template.result(binding))
+            upload! config_stream, "#{deploy_to}/runit/puma.rb"
+          else
+            error "Template from 'config_puma_template' variable isn't found: #{config_template_path}"
+          end
+        else
+          error "Puma config isn't found. You should run runit:puma:setup."
         end
       end
     end
@@ -48,9 +77,10 @@ namespace :runit do
     desc "Enable puma runit service"
     task :enable do
       on roles(:app) do |host|
-        if test "[ -d #{deploy_to}/runit/available/puma ]"
-          within "#{deploy_to}/runit/enabled" do
-            execute :ln, "-sf", "../available/puma", "puma"
+        if test "[ -d #{deploy_to}/runit/available/puma-#{fetch(:application)} ]"
+          within "#{deploy_to}/runit/enabled-#{fetch(:application)}" do
+            execute :ln, "-sf", "../available/puma-#{fetch(:application)}", "puma-#{fetch(:application)}"
+	    execute :ln, "-sf", "#{deploy_to}/runit/available/puma-#{fetch(:application)}", "/etc/service/",
           end
         else
           error "Puma runit service isn't found. You should run runit:puma:setup."
@@ -62,41 +92,21 @@ namespace :runit do
     task :disable do
       invoke "runit:puma:stop"
       on roles(:app) do
-        if test "[ -d #{deploy_to}/runit/enabled/puma ]"
-          execute :rm, "-f", "#{deploy_to}/runit/enabled/puma"
+        if test "[ -d #{deploy_to}/runit/enabled/puma-#{fetch(:application)} ]"
+          execute :rm, "-f", "#{deploy_to}/runit/enabled/puma-#{fetch(:application)}"
+	  execute :rm. "-f", "/etc/service/puma-#{fetch(:application)}"
         else
           error "Puma runit service isn't enabled."
         end
       end
     end
 
-    desc "Start puma runit service"
-    task :start do
+    %w[start stop restart].each do |command|
+    desc "#{command} Puma server."
+    task command do
       on roles(:app) do
-        if test "[ -d #{deploy_to}/runit/enabled/puma ]"
-          execute :sv, "start", "#{deploy_to}/runit/enabled/puma/"
-        else
-          error "Puma runit service isn't enabled."
-        end
-      end
-    end
-
-    desc "Stop puma runit service"
-    task :stop do
-      on roles(:app) do
-        if test "[ -d #{deploy_to}/runit/enabled/puma ]"
-          execute :sv, "stop", "#{deploy_to}/runit/enabled/puma/"
-        else
-          error "Puma runit service isn't enabled."
-        end
-      end
-    end
-
-    desc "Restart puma runit service"
-    task :restart do
-      on roles(:app) do
-        if test "[ -d #{deploy_to}/runit/enabled/puma ]"
-          execute :sv, "restart", "#{deploy_to}/runit/enabled/puma/"
+        if test "[ -d #{deploy_to}/runit/enabled/puma-#{fetch(:application)} ]"
+          execute :sv, "restart", "puma-#{fetch(:application)}", "#{command}"
         else
           error "Puma runit service isn't enabled."
         end
@@ -106,8 +116,8 @@ namespace :runit do
     desc "Run phased restart puma runit service"
     task :phased_restart do
       on roles(:app) do
-        if test "[ -d #{deploy_to}/runit/enabled/puma ]"
-          execute :sv, "1", "#{deploy_to}/runit/enabled/puma/"
+        if test "[ -d #{deploy_to}/runit/enabled/puma-#{fetch(:application)} ]"
+          execute :sv, "1", "puma-#{fetch(:application)}"
         else
           error "Puma runit service isn't enabled."
         end
@@ -119,6 +129,7 @@ end
 namespace :load do
   task :defaults do
     set :runit_puma_run_template, File.expand_path("../run-puma.erb", __FILE__)
+    set :runit_puma_config_template, File.expand_path("../puma.erb", __FILE__)
     set :runit_puma_workers, 1
     set :runit_puma_threads_min, 0
     set :runit_puma_threads_max, 16
