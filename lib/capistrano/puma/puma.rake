@@ -106,7 +106,7 @@ namespace :runit do
     task command do
       on roles(:app) do
         if test "[ -d #{deploy_to}/runit/enabled/puma-#{fetch(:application)} ]"
-          execute :sv, "#{command}", "puma-#{fetch(:application)}"
+          execute "sudo sv #{command} puma-#{fetch(:application)}"
         else
           error "Puma runit service isn't enabled."
         end
@@ -117,7 +117,7 @@ namespace :runit do
     task :phased_restart do
       on roles(:app) do
         if test "[ -d #{deploy_to}/runit/enabled/puma-#{fetch(:application)} ]"
-          execute :sv, "1", "puma-#{fetch(:application)}"
+          execute "sudo sv 1 puma-#{fetch(:application)}"
         else
           error "Puma runit service isn't enabled."
         end

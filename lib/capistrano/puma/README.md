@@ -13,12 +13,15 @@ require "capistrano/puma"
 * `runit:puma:enable` -- enable and autostart service.
 * `runit:puma:disable` -- stop and disable service.
 * `runit:puma:start` -- start service.
+* `runit:puma:status` -- service status.
 * `runit:puma:stop` -- stop service.
 * `runit:puma:restart` -- restart service.
 * `runit:puma:phased_restart` -- run phased restart.
+* `runit:puma:change_config` -- change puma config.
 
 ## Variables
 
+* `runit_puma_config_template` -- path to ERB template of `puma.rb` file. Default value: internal default template (`lib/capistrano/runit/templates/puma.erb`).
 * `runit_puma_run_template` -- path to ERB template of `run` file. Default value: internal default template (`lib/capistrano/runit/templates/run-puma.erb`).
 * `runit_puma_workers` -- number of puma workers. Default value: 1.
 * `runit_puma_threads_min` -- minimal threads to use. Default value: 0.

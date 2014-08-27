@@ -13,13 +13,13 @@ Add to `Gemfile`:
 ```
 group :development do
   gem "capistrano", "~> 3.1"
-  gem "capistrano-runit", "~> 2.0"
+  gem 'capistrano-runit', github: "pvlltvk/capistrano-runit"
 end
 ```
 
 Run:
 ```
-$ bundle install
+$ bundle
 ```
 
 ## Usage
@@ -30,4 +30,3 @@ See documention for each module below.
 
 * [Base tasks](/lib/capistrano/runit/README.md)
 * [Puma](/lib/capistrano/puma/README.md)
-* [Sidekiq](/lib/capistrano/sidekiq/README.md)
