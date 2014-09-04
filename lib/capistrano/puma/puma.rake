@@ -125,6 +125,7 @@ namespace :runit do
     end
   end
 end
+end
 
 namespace :load do
   task :defaults do
