@@ -12,4 +12,4 @@ else
 fi
 
 cd <%= current_path %>
-<%= SSHKit.config.default_env.map { |k, v| "#{k.upcase}=\"#{v}\"" }.join(" ") %> exec <%= SSHKit.config.command_map[:puma] %> -C #{deploy_to}/runit/puma.rb
+<%= SSHKit.config.default_env.map { |k, v| "#{k.upcase}=\"#{v}\"" }.join(" ") %>exec chpst -u $APP_USER <%= SSHKit.config.command_map[:puma] %> -C ../runit/puma.rb
