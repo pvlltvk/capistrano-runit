@@ -1,9 +1,10 @@
 #!/bin/sh
 
 APP_USER=rubyworker
-APP_DIR=<%= current_path %>
+APP_CURRENT_DIR=<%= current_path %>
+APP_DIR=`echo "$APP_CURRENT_DIR" | cut -d "/" -f 1-4`
 
-RUBY_ENV=`cat $APP_DIR/.ruby-version`@`cat $APP_DIR/.ruby-gemset`
+RUBY_ENV=`cat $APP_CURRENT_DIR/.ruby-version`@`cat $APP_CURRENT_DIR/.ruby-gemset`
 
 if echo "$RUBY_ENV" | grep -v ruby; then
     . /home/$APP_USER/.rvm/environments/ruby-$RUBY_ENV
@@ -12,4 +13,4 @@ else
 fi
 
 cd <%= current_path %>
-<%= SSHKit.config.default_env.map { |k, v| "#{k.upcase}=\"#{v}\"" }.join(" ") %>exec chpst -u $APP_USER <%= SSHKit.config.command_map[:puma] %> -C ../runit/puma.rb
+<%= SSHKit.config.default_env.map { |k, v| "#{k.upcase}=\"#{v}\"" }.join(" ") %>exec chpst -u $APP_USER <%= SSHKit.config.command_map[:puma] %> -C $APP_DIR/runit/puma.rb
